@@ -1,0 +1,31 @@
+# Local Codex settings
+.codex/
+.local/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Streamlit and local secrets
+.streamlit/secrets.toml
+.env
+
+# Generated ML artifacts and reports
+hoerblick/models/*/saved_model.pb
+hoerblick/models/*/variables/
+hoerblick/models/*/*.npz
+hoerblick/data/real_audio/
+*.log
+*.tmp
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,7 @@
+# Optional dependencies for the two real model variants.
+# Install this file after the core app is working.
+tensorflow>=2.16,<3
+tensorflow-hub>=0.16,<1
+librosa>=0.10,<1
+scikit-learn>=1.5,<2
+imageio-ffmpeg>=0.5,<1

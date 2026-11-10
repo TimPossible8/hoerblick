@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.wav binary
+*.mp3 binary
+*.flac binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.h5 binary

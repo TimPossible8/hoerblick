@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.streamlit/secrets.toml
+.DS_Store
+
+# Local checkpoint and held-out audio feature cache
+models/*/best.weights.h5
+models/*/saved_model.pb
+models/*/variables/
+models/*/held_out_test.npz
+
+# Copied real recordings and feature arrays stay outside the repository
+data/real_audio/
+
+# Generated reports and local caches
+*.log
+*.tmp

@@ -1,0 +1,54 @@
+{
+  "seed": 2627,
+  "sample_rate": 16000,
+  "clip_seconds": 5,
+  "epochs_requested": 30,
+  "epochs_completed": 8,
+  "accuracy": 0.25,
+  "per_class": {
+    "alarm": {
+      "test_count": 3,
+      "recall": 1.0
+    },
+    "siren": {
+      "test_count": 3,
+      "recall": 0.0
+    },
+    "doorbell": {
+      "test_count": 4,
+      "recall": 0.0
+    },
+    "background": {
+      "test_count": 2,
+      "recall": 0.0
+    }
+  },
+  "confusion_matrix_rows_true_columns_predicted": [
+    [
+      3,
+      0,
+      0,
+      0
+    ],
+    [
+      3,
+      0,
+      0,
+      0
+    ],
+    [
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      2,
+      0,
+      0,
+      0
+    ]
+  ],
+  "train_count": 30,
+  "test_count": 12
+}
