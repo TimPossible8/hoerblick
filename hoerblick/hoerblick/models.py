@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
+from .model_download import resolve_own_model
 from .priority import CLASS_SPECS, normalize_label
 
 
@@ -310,12 +311,14 @@ class OwnModelAdapter:
         self.labels_path = project_root / "models" / "model_a" / "labels.txt"
 
     def load(self):
-        if not self.model_path.is_file():
-            raise ModelUnavailable("keras_model.h5 fehlt in models/model_a/.")
         labels = _read_labels(self.labels_path)
         if labels != ["alarm", "siren", "doorbell", "background"]:
             raise ModelUnavailable("labels.txt muss alarm, siren, doorbell, background in dieser Reihenfolge enthalten.")
-        return _load_own_model(str(self.model_path.resolve()), self.model_path.stat().st_mtime_ns), labels
+        try:
+            model_path = resolve_own_model(self.model_path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise ModelUnavailable(f"Eigenes Modell konnte nicht heruntergeladen werden: {exc}") from exc
+        return _load_own_model(str(model_path.resolve()), model_path.stat().st_mtime_ns), labels
 
     def predict(self, audio_bytes: bytes, filename: str) -> ModelResult:
         model, labels = self.load()

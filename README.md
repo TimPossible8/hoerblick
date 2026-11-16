@@ -42,7 +42,9 @@ streamlit run app.py
 
 Streamlit lädt dieselben HTML-, CSS- und JavaScript-Dateien aus `web-prototype/` als Komponente. Uploads werden über Streamlit an die vorhandenen Python-Modelladapter weitergereicht. Ein zusätzlicher HTTP-Server ist dafür nicht erforderlich.
 
-Fehlende Modelle werden als nicht verfügbar angezeigt; es werden keine Demo-Ergebnisse als echte Analyse ausgegeben. Der eigene Export gehört nach `hoerblick/models/model_a/keras_model.h5` und erwartet 448 Merkmale und vier Klassen. Gewichte werden nicht in Git versioniert. YAMNet wird beim ersten Start aus TensorFlow Hub geladen. Ist nur YAMNet verfügbar, wird es automatisch ausgewählt.
+Der eigene Export erwartet 448 Merkmale und vier Klassen. Ein lokaler Export unter `hoerblick/models/model_a/keras_model.h5` hat Vorrang. Fehlt er, lädt die App automatisch den veröffentlichten Export vom GitHub-Release `model-a-2026-11-16`. URL, Dateigröße und SHA-256-Prüfsumme stehen in `hoerblick/models/model_a/release.json`. Die geprüfte Datei wird unter `models/model_a/.cache/` wiederverwendet; Gewichte bleiben außerhalb von Git. YAMNet wird beim ersten Start aus TensorFlow Hub geladen.
+
+Download- oder Modellfehler werden als nicht verfügbar angezeigt; es werden keine Demo-Ergebnisse als echte Analyse ausgegeben. Ist nur YAMNet verfügbar, wird es automatisch ausgewählt.
 
 ## Auf Streamlit veröffentlichen
 
@@ -53,7 +55,9 @@ Fehlende Modelle werden als nicht verfügbar angezeigt; es werden keine Demo-Erg
 
 Das gesamte Repository muss ausgecheckt werden, einschließlich `web-prototype/`. Nur `app.py` hochzuladen reicht nicht. Nach Aktualisierung der verbundenen Branch den Deployment-Stand prüfen und die App bei Bedarf neu starten.
 
-In der Cloud werden Uploads auf dem Streamlit-Server verarbeitet. Die App schreibt sie nicht als Dateien auf die Festplatte. Ohne separat bereitgestellten eigenen Modellexport ist online nur YAMNet verfügbar. Die Vergleichsansicht zeigt die gespeicherten Messungen aus `hoerblick/vergleich.csv`, nicht einen neuen Cloud-Testlauf.
+In der Cloud werden beide Modelle automatisch geladen, ohne manuelles Hochladen der Gewichte oder GitHub-Token. Der erste Start benötigt Internetzugriff auf GitHub Releases und TensorFlow Hub und dauert länger als spätere Analysen. Uploads werden auf dem Streamlit-Server verarbeitet und nicht als Dateien auf die Festplatte geschrieben. Die Vergleichsansicht zeigt die gespeicherten Messungen aus `hoerblick/vergleich.csv`, nicht einen neuen Cloud-Testlauf.
+
+Für einen späteren Modellwechsel den neuen Export als Asset eines neuen GitHub-Releases veröffentlichen und URL, SHA-256 und Dateigröße in `release.json` aktualisieren. Der nach Prüfsumme benannte Cache verhindert, dass die Cloud anschließend einen alten Export verwendet. Lokale Trainingsexporte haben weiterhin Vorrang.
 
 ## Daten und Modi
 

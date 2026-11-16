@@ -46,8 +46,11 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe serve.py
 ```
 
-`keras_model.h5` und `labels.txt` müssen als lokaler Export vorhanden sein.
-Die Gewichte werden durch diese Änderung nicht neu trainiert.
+`labels.txt` ist eingecheckt. Wenn `keras_model.h5` lokal fehlt, wird der
+veröffentlichte Export automatisch von GitHub Releases geladen und anhand
+von `models/model_a/release.json` auf Größe und SHA-256 geprüft. Die Datei
+bleibt im ignorierten Ordner `models/model_a/.cache/`. Ein vorhandener lokaler
+Trainingsexport hat Vorrang. Es ist kein erneutes Training notwendig.
 
 ### Streamlit-Alternative und Vergleich
 
@@ -59,17 +62,16 @@ Die Gewichte werden durch diese Änderung nicht neu trainiert.
 
 ### Online-Demo mit Streamlit Community Cloud
 
-Beim Deployment dieses GitHub-Repositories als App den Hauptordner `hoerblick/`
-und die Datei `app.py` auswählen. `requirements.txt` installiert auch die
-ML-Abhängigkeiten für die Modelladapter. Modellgewichte werden nicht mit Git
-bereitgestellt; in der Cloud ist deshalb YAMNet nutzbar, während „Eigenes
-Modell“ ohne separat bereitgestellten Export nicht verfügbar ist. YAMNet wird
-beim ersten Laden von TensorFlow Hub geladen.
+Beim Deployment `TimPossible8/hoerblick`, Branch `main`, Hauptdatei
+`hoerblick/app.py` und Python `3.12` auswählen. `requirements.txt` installiert
+auch die ML-Abhängigkeiten. Das eigene Modell wird beim ersten Start aus dem
+GitHub-Release `model-a-2026-11-16` geladen, YAMNet aus TensorFlow Hub.
+Beide Downloads werden zwischengespeichert. Es sind keine Zugangsdaten für
+die Modelldownloads nötig. Fehler erscheinen ausdrücklich in der Oberfläche.
 
-Streamlit verwendet dieselben Modelladapter und aktualisierten Warnstufen.
-Die originalgetreue mobile Designumsetzung wird mit `serve.py` gestartet.
-Upload-Dateien werden nicht gespeichert. Beim lokalen Betrieb erfolgt
-die Audioberechnung auf diesem Computer.
+Streamlit und `serve.py` verwenden dieselbe mobile Oberfläche aus
+`web-prototype/` und dieselben Modelladapter. Upload-Dateien werden nicht
+gespeichert. In der Cloud erfolgt die Audioberechnung auf dem Streamlit-Server.
 
 ## Basis aus den ersten beiden Schulstunden
 

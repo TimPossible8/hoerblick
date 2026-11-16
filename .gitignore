@@ -23,6 +23,7 @@ hoerblick/models/*/saved_model.pb
 hoerblick/models/*/variables/
 hoerblick/models/*/*.npz
 hoerblick/models/*/*.h5
+hoerblick/models/model_a/.cache/
 hoerblick/models/model_b/
 hoerblick/data/real_audio/
 *.log
