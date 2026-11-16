@@ -6,6 +6,16 @@
   --shadow: 0 8px 24px rgba(31,43,63,.06), 0 1px 3px rgba(31,43,63,.05); --radius-large: 22px; --radius-medium: 17px; --radius-small: 12px;
   font-family: "DM Sans", "Segoe UI", sans-serif;
 }
+[hidden] { display: none !important; }
+button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+#analysis-message { margin: 12px 2px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+#analysis-message.is-error { color: #9c2823; }
+.upload-zone:has(+ input:focus-visible) { outline: 3px solid var(--primary); outline-offset: 3px; }
+.comparison-row { padding-block: 10px !important; overflow-wrap: anywhere; }
+.source-list { font-size: 12px; line-height: 1.65; }
+.source-list a { color: var(--primary-dark); }
+.warning-panel--yellow { background: #865400 !important; }
+.result-label, .confidence-row, .warning-foot { color: #fff !important; }
 * { box-sizing: border-box; }
 html { background: var(--page); }
 body { margin: 0; min-width: 320px; background: var(--page); color: var(--ink); font-family: inherit; font-size: 15px; }

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f6f8fb" />
-    <title>HörBlick – UI-Skizze</title>
+    <title>HörBlick – Audioanalyse</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet" />
@@ -16,12 +16,12 @@
         <div class="brand-lockup">
           <span class="brand-mark" aria-hidden="true">H</span>
           <div>
-            <p class="eyebrow">MOBILE PROTOTYP</p>
+            <p class="eyebrow">LOKALER PROTOTYP</p>
             <p class="brand-name">HörBlick</p>
           </div>
         </div>
         <div class="top-bar-actions">
-          <span class="demo-status"><span class="status-dot"></span> Demo</span>
+          <span class="demo-status" id="connection-status" role="status">Modelle werden geladen …</span>
           <button class="icon-button" data-screen="ueber" aria-label="Über HörBlick öffnen"><span class="material-symbols-rounded">info</span></button>
         </div>
       </header>
@@ -46,12 +46,12 @@
             </div>
             <label class="upload-zone" for="audio-file">
               <span class="upload-icon material-symbols-rounded">audio_file</span>
-              <span class="upload-copy"><strong>Audio hochladen</strong><small>WAV, MP3 oder FLAC</small></span>
+              <span class="upload-copy"><strong>Audio hochladen</strong><small>WAV, MP3, FLAC oder OGG · max. 25 MB</small></span>
               <span class="upload-action material-symbols-rounded">upload</span>
               <span class="file-name" id="file-name">Noch keine Datei ausgewählt</span>
             </label>
-            <input id="audio-file" type="file" accept=".wav,.mp3,.flac,audio/*" />
-            <p class="input-hint"><span class="material-symbols-rounded">lock</span> Die Datei bleibt für diesen Prototyp auf deinem Gerät.</p>
+            <input id="audio-file" type="file" accept=".wav,.mp3,.flac,.ogg" aria-label="Audiodatei auswählen" />
+            <p class="input-hint"><span class="material-symbols-rounded" aria-hidden="true">lock</span> Analyse auf diesem Computer · erste 5 Sekunden · kein Speichern des Uploads.</p>
           </section>
 
           <section class="surface-panel model-panel">
@@ -59,41 +59,43 @@
               <div><p class="section-kicker">Schritt 2</p><h2>Analyseweg wählen</h2></div>
               <span class="step-count">2 / 2</span>
             </div>
-            <div class="model-segment" role="tablist" aria-label="Analyseweg">
-              <button class="model-option is-selected" data-model="own" role="tab" aria-selected="true"><span class="material-symbols-rounded">model_training</span><span><strong>Eigenes Modell</strong><small>Version A</small></span></button>
-              <button class="model-option" data-model="yamnet" role="tab" aria-selected="false"><span class="material-symbols-rounded">hub</span><span><strong>YAMNet</strong><small>Version B</small></span></button>
+            <div class="model-segment" role="group" aria-label="Analyseweg">
+              <button class="model-option is-selected" data-model="own" aria-pressed="true"><span class="material-symbols-rounded" aria-hidden="true">model_training</span><span><strong>Eigenes Modell</strong><small>Version A</small></span></button>
+              <button class="model-option" data-model="yamnet" aria-pressed="false"><span class="material-symbols-rounded" aria-hidden="true">hub</span><span><strong>YAMNet</strong><small>Version B</small></span></button>
             </div>
             <p class="model-help" id="model-help">Mit eigenen Aufnahmen auf die vier Projektklassen trainiert.</p>
           </section>
 
-          <section class="warning-panel warning-panel--red" id="analysis-result" aria-live="polite">
-            <div class="warning-topline"><span class="warning-level"><span class="material-symbols-rounded">priority_high</span> Warnstufe Rot</span><span class="result-label" id="result-label">Demoergebnis</span></div>
-            <h2 id="result-title">Feueralarm erkannt</h2>
-            <p id="result-description">Bitte sofort reagieren und die Umgebung verlassen.</p>
-            <div class="confidence-row"><span>Modellkonfidenz</span><strong id="confidence-value">91 %</strong></div>
-            <div class="confidence-track" aria-hidden="true"><span id="confidence-bar" style="width: 91%"></span></div>
+          <section class="warning-panel" id="analysis-result" aria-live="polite" hidden>
+            <div class="warning-topline"><span class="warning-level"><span class="material-symbols-rounded" id="warning-symbol" aria-hidden="true"></span><span id="warning-level-text"></span></span><span class="result-label" id="result-label"></span></div>
+            <h2 id="result-title"></h2>
+            <p id="result-description"></p>
+            <div class="confidence-row"><span>Konfidenz / Modellscore</span><strong id="confidence-value"></strong></div>
+            <div class="confidence-track" aria-hidden="true"><span id="confidence-bar"></span></div>
+            <p id="result-details"></p>
             <div class="warning-foot"><span class="material-symbols-rounded">volume_off</span> Das Signal wird zusätzlich als Farbe, Symbol und Text angezeigt.</div>
           </section>
 
           <div class="action-row">
-            <button class="filled-button" id="analyse-button"><span class="material-symbols-rounded">graphic_eq</span> Analyse starten</button>
+            <button class="filled-button" id="analyse-button" disabled><span class="material-symbols-rounded">graphic_eq</span> Analyse starten</button>
             <button class="outlined-button" id="reset-button" aria-label="Analyse zurücksetzen"><span class="material-symbols-rounded">restart_alt</span></button>
           </div>
 
-          <section class="quick-facts" aria-label="Projektumfang"><div class="quick-fact"><strong>4</strong><span>Geräuschklassen</span></div><div class="quick-fact"><strong>2</strong><span>Modellvarianten</span></div><div class="quick-fact"><strong>10</strong><span>Testclips je Klasse</span></div></section>
+          <p id="analysis-message" role="status" aria-live="polite"></p>
+          <section class="quick-facts" aria-label="Projektumfang"><div class="quick-fact"><strong>4</strong><span>Geräuschklassen</span></div><div class="quick-fact"><strong>2</strong><span>Modellvarianten</span></div><div class="quick-fact"><strong>5 s</strong><span>Audio je Analyse</span></div></section>
           <p class="disclaimer">HörBlick ist ein Schulprojekt und ersetzt keine zertifizierte Sicherheitslösung oder normgeprüften Rauchmelder.</p>
         </section>
 
         <section class="screen" data-view="vergleich">
           <div class="page-intro"><p class="section-kicker">Gleicher Testdatensatz</p><h1>Vergleich</h1><p class="supporting-text">Beide Modellvarianten werden unter denselben Bedingungen geprüft.</p></div>
           <div class="model-summary-grid">
-            <article class="model-summary model-summary--blue"><span class="summary-icon material-symbols-rounded">model_training</span><p>Version A</p><h2>Eigenes Modell</h2><span class="summary-status"><span class="status-dot"></span> bereit für Test</span></article>
-            <article class="model-summary model-summary--mint"><span class="summary-icon material-symbols-rounded">hub</span><p>Version B</p><h2>YAMNet</h2><span class="summary-status"><span class="status-dot"></span> bereit für Test</span></article>
+            <article class="model-summary model-summary--blue"><span class="summary-icon material-symbols-rounded">model_training</span><p>Version A</p><h2>Eigenes Modell</h2><span class="summary-status" id="status-own">wird geprüft …</span></article>
+            <article class="model-summary model-summary--mint"><span class="summary-icon material-symbols-rounded">hub</span><p>Version B</p><h2>YAMNet</h2><span class="summary-status" id="status-yamnet">wird geprüft …</span></article>
           </div>
           <section class="surface-panel comparison-panel">
-            <div class="panel-heading"><div><p class="section-kicker">Messwerte</p><h2>Testübersicht</h2></div><button class="icon-button icon-button--small" aria-label="Tabelle exportieren"><span class="material-symbols-rounded">download</span></button></div>
-            <div class="comparison-table"><div class="comparison-row comparison-row--head"><span>Kriterium</span><span>Eigen</span><span>YAMNet</span></div><div class="comparison-row"><strong>Accuracy</strong><span>—</span><span>—</span></div><div class="comparison-row"><strong>Recall Alarm</strong><span>—</span><span>—</span></div><div class="comparison-row"><strong>Recall Sirene</strong><span>—</span><span>—</span></div><div class="comparison-row"><strong>Fehlalarmrate</strong><span>—</span><span>—</span></div><div class="comparison-row"><strong>Analysezeit</strong><span>—</span><span>—</span></div></div>
-            <p class="table-note"><span class="material-symbols-rounded">info</span> Messwerte werden nach den Testläufen ergänzt.</p>
+            <div class="panel-heading"><div><p class="section-kicker">Messwerte</p><h2>Testübersicht</h2></div><a class="icon-button icon-button--small" href="/api/comparison.csv" download="vergleich.csv" aria-label="Tabelle exportieren"><span class="material-symbols-rounded">download</span></a></div>
+            <div class="comparison-table"><div class="comparison-row comparison-row--head"><span>Kriterium</span><span>Eigen</span><span>YAMNet</span></div><div id="comparison-body"></div></div>
+            <p class="table-note" id="comparison-note">Vergleich wird geladen …</p>
           </section>
           <section class="criteria-list"><p class="section-kicker">Bewertung</p><h2>Worauf es ankommt</h2><div class="criteria-item"><span class="material-symbols-rounded">check_circle</span><span><strong>Erkennungsgenauigkeit</strong><small>Welche Klasse wird richtig erkannt?</small></span></div><div class="criteria-item"><span class="material-symbols-rounded">warning</span><span><strong>Fehlalarmrate</strong><small>Wie oft wird Hintergrund falsch gewarnt?</small></span></div><div class="criteria-item"><span class="material-symbols-rounded">speed</span><span><strong>Geschwindigkeit</strong><small>Wie schnell steht die Warnung bereit?</small></span></div></section>
         </section>
@@ -101,8 +103,15 @@
         <section class="screen" data-view="ueber">
           <div class="page-intro"><p class="section-kicker">Projektkontext</p><h1>Über HörBlick</h1><p class="supporting-text">Eine mobile Oberfläche, die akustische Informationen sichtbar und verständlich macht.</p></div>
           <section class="persona-panel"><div class="persona-avatar"><span class="material-symbols-rounded">person</span></div><div><p class="section-kicker">Zielgruppe</p><h2>Lena, 19 Jahre</h2><p>Hochgradig schwerhörig, nutzt Hörgeräte und zieht in die erste eigene Wohnung.</p></div></section>
-          <section class="surface-panel about-panel"><div class="panel-heading"><div><p class="section-kicker">Minimalprototyp</p><h2>Was HörBlick zeigt</h2></div></div><div class="feature-list"><div class="feature-item"><span class="feature-icon feature-icon--red material-symbols-rounded">notifications_active</span><span><strong>Sicherheitsgeräusche</strong><small>Feueralarm und Sirenen werden als rote Warnung sichtbar.</small></span></div><div class="feature-item"><span class="feature-icon feature-icon--yellow material-symbols-rounded">doorbell</span><span><strong>Alltagsgeräusche</strong><small>Eine Türklingel wird als gelbe Handlungsempfehlung angezeigt.</small></span></div><div class="feature-item"><span class="feature-icon feature-icon--green material-symbols-rounded">air</span><span><strong>Hintergrund oder Stille</strong><small>Keine Warnung, wenn kein relevantes Signal erkannt wird.</small></span></div></div></section>
+          <section class="surface-panel about-panel"><div class="panel-heading"><div><p class="section-kicker">Minimalprototyp</p><h2>Was HörBlick zeigt</h2></div></div><div class="feature-list"><div class="feature-item"><span class="feature-icon feature-icon--red material-symbols-rounded">notifications_active</span><span><strong>Sicherheitsgeräusche</strong><small>Feueralarm und Sirenen erscheinen je nach Modellscore gelb oder rot.</small></span></div><div class="feature-item"><span class="feature-icon feature-icon--yellow material-symbols-rounded">doorbell</span><span><strong>Alltagsgeräusche</strong><small>Eine Türklingel wird als gelbe Handlungsempfehlung angezeigt.</small></span></div><div class="feature-item"><span class="feature-icon feature-icon--green material-symbols-rounded">air</span><span><strong>Hintergrundgeräusche</strong><small>Grün bedeutet „kein Zielsignal erkannt“. Unsichere Ergebnisse bleiben gelb.</small></span></div></div></section>
           <section class="limits-panel"><span class="material-symbols-rounded">shield</span><div><h2>Grenzen des Prototyps</h2><p>HörBlick ist eine Demonstration. Mikrofonreichweite, Hintergrundgeräusche, Fehlalarme und Datenschutz müssen vor einer echten Nutzung geprüft werden.</p></div></section>
+          <section class="surface-panel source-list">
+            <h2>Modelle &amp; Datenschutz</h2>
+            <p>Eigenes Modell: lokal trainierter Extra-Trees-Klassifikator mit Keras-Kalibrierung. YAMNet: vortrainiertes AudioSet-Modell (Apache-2.0).</p>
+            <p>Der Python-Server auf diesem Computer analysiert die Datei und speichert sie nicht. YAMNet wird beim ersten Start heruntergeladen. Google Fonts lädt Schriftarten aus dem Internet.</p>
+            <p>Die Warnstufe berücksichtigt Klasse und Modellscore. Grün bedeutet nur „kein Zielsignal erkannt“. Die Scores beider Modelle sind keine direkt vergleichbaren Trefferwahrscheinlichkeiten.</p>
+            <p><a href="https://www.tensorflow.org/hub/tutorials/yamnet" target="_blank" rel="noreferrer">YAMNet-Dokumentation</a> · <a href="https://github.com/tensorflow/models/tree/master/research/audioset/yamnet" target="_blank" rel="noreferrer">Quellcode und Lizenz</a></p>
+          </section>
         </section>
       </main>
 

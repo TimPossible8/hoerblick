@@ -1,0 +1,25 @@
+file,sha256,expected,predicted,model,confidence,warning,source_label,elapsed_ms
+alarm/136482__erihamster__smoke-detector.wav,5e777835f581ae46c125287c089f7c34384fd4b6779917e9a493cc8fe6d518e3,alarm,background,own,0.325067,Gelb,,2868.42
+alarm/136482__erihamster__smoke-detector.wav,5e777835f581ae46c125287c089f7c34384fd4b6779917e9a493cc8fe6d518e3,alarm,alarm,yamnet,0.399432,Gelb,"Smoke detector, smoke alarm",51.09
+alarm/155006__rayprice__smoke-detector-alarm.wav,d19ad04f02b5c00449c0ff5d4c77aeed18f730e476a2f31162d636ac48311076,alarm,alarm,own,0.317812,Gelb,,3391.27
+alarm/155006__rayprice__smoke-detector-alarm.wav,d19ad04f02b5c00449c0ff5d4c77aeed18f730e476a2f31162d636ac48311076,alarm,background,yamnet,0.922083,Grün,Alarm,52.01
+alarm/608739__ladako__alrmelec_smoke-detector-test-noise-in-small-room_ladako_room-reflections.wav,9db0ea12450667b1b141b9d9731158606a81efc51396f9ae88f9b22fcef70ebf,alarm,alarm,own,0.42753,Gelb,,2117.96
+alarm/608739__ladako__alrmelec_smoke-detector-test-noise-in-small-room_ladako_room-reflections.wav,9db0ea12450667b1b141b9d9731158606a81efc51396f9ae88f9b22fcef70ebf,alarm,alarm,yamnet,0.838882,Rot,"Smoke detector, smoke alarm",40.12
+siren/135720__ikbenraar__police-motorcycle-sirene-clean.wav,34fe146ebc86077249f29ae9feb2e174e3993d937d6bfff2e1bbe9c685572dac,siren,siren,own,0.416632,Gelb,,2156.33
+siren/135720__ikbenraar__police-motorcycle-sirene-clean.wav,34fe146ebc86077249f29ae9feb2e174e3993d937d6bfff2e1bbe9c685572dac,siren,siren,yamnet,0.79378,Rot,Siren,43.19
+siren/174021__sonidor__sirene.wav,5abf5e752f2c3093643d0438f822117aaf75086be2284d6c568fcd86199b3f08,siren,siren,own,0.444987,Gelb,,2125.07
+siren/174021__sonidor__sirene.wav,5abf5e752f2c3093643d0438f822117aaf75086be2284d6c568fcd86199b3f08,siren,siren,yamnet,0.605614,Rot,Siren,39.41
+siren/395400__wolfercz__siren.wav,ef8c7e848e4fa9b0b15d7304bd471a1e28cd6752800bdd44e58a8399fd1943a0,siren,siren,own,0.377615,Gelb,,2205.95
+siren/395400__wolfercz__siren.wav,ef8c7e848e4fa9b0b15d7304bd471a1e28cd6752800bdd44e58a8399fd1943a0,siren,background,yamnet,0.384584,Grün,Alarm,38.73
+doorbell/157249__baujahr66__dingdong4.wav,5c250675d8dd41d6b5957a162819cea9de31ad9e58cd20393dcccabf7d962966,doorbell,doorbell,own,0.365927,Gelb,,1897.31
+doorbell/157249__baujahr66__dingdong4.wav,5c250675d8dd41d6b5957a162819cea9de31ad9e58cd20393dcccabf7d962966,doorbell,background,yamnet,0.445044,Grün,Music,40.04
+doorbell/383976__marianne9876__doorbell.wav,69b469491e29d25cdc510600b69e903932749ee07ddaa8105824a4bdeca7eeb0,doorbell,siren,own,0.377312,Gelb,,2357.69
+doorbell/383976__marianne9876__doorbell.wav,69b469491e29d25cdc510600b69e903932749ee07ddaa8105824a4bdeca7eeb0,doorbell,background,yamnet,0.334774,Gelb,Music,40.04
+doorbell/425424__anthonyramirez__doorbell-various.wav,99066f1efd0a8675b7c78fd5fd5e15f0000e48eae0098676853c0cfebf0c20f2,doorbell,alarm,own,0.326348,Gelb,,1913.65
+doorbell/425424__anthonyramirez__doorbell-various.wav,99066f1efd0a8675b7c78fd5fd5e15f0000e48eae0098676853c0cfebf0c20f2,doorbell,background,yamnet,1.0,Grün,Silence,45.98
+doorbell/Doorbell (Ding Dong) - Sound Effect for Editing.mp3,4791f88c4c6e98503e67c115eb519ee4e108ca567b5c2e1c8d2ddb008ef71aba,doorbell,doorbell,own,0.465374,Gelb,,1972.3
+doorbell/Doorbell (Ding Dong) - Sound Effect for Editing.mp3,4791f88c4c6e98503e67c115eb519ee4e108ca567b5c2e1c8d2ddb008ef71aba,doorbell,background,yamnet,0.418407,Grün,Silence,47.43
+background/155796__mario1298__waiting-for-passengers-at-the-airport-background.wav,7cba1a9d56713d4bbe13dd78674f2646ac376b00854c8c9cf63c1d24367179d6,background,background,own,0.368229,Grün,,2370.8
+background/155796__mario1298__waiting-for-passengers-at-the-airport-background.wav,7cba1a9d56713d4bbe13dd78674f2646ac376b00854c8c9cf63c1d24367179d6,background,background,yamnet,0.650318,Grün,Speech,41.09
+background/738057__garuda1982__light-summer-rain-with-birds-and-city-background.wav,1cf7ebfe41d1314ca580d560501628c2bfa80209811776fb929405a04f20626c,background,siren,own,0.361894,Gelb,,2536.67
+background/738057__garuda1982__light-summer-rain-with-birds-and-city-background.wav,1cf7ebfe41d1314ca580d560501628c2bfa80209811776fb929405a04f20626c,background,background,yamnet,0.306665,Gelb,"Outside, rural or natural",63.15

@@ -1,0 +1,7 @@
+datei,split,klasse,quelle,titel,uploader,lizenz,labels_original
+train/doorbell/407637.ogg,train,doorbell,FSD50K / Freesound-ID 407637,Vintage Doorbell Buzz,jph298,http://creativecommons.org/publicdomain/zero/1.0/,"Doorbell,Door,Domestic_sounds_and_home_sounds,Alarm"
+train/siren/322205.ogg,train,siren,FSD50K / Freesound-ID 322205,Police Car Budapest.WAV,freesoundjon01,http://creativecommons.org/publicdomain/zero/1.0/,"Motor_vehicle_(road),Siren,Vehicle,Alarm"
+eval/alarm/210513.ogg,eval,alarm,FSD50K / Freesound-ID 210513,Fire Alarm.wav,nigelcoop,http://creativecommons.org/publicdomain/zero/1.0/,Alarm
+eval/background/404010.ogg,eval,background,FSD50K / Freesound-ID 404010,Waterfall,bruce965,http://creativecommons.org/licenses/by/3.0/,"Stream,Water"
+eval/doorbell/330400.ogg,eval,doorbell,FSD50K / Freesound-ID 330400,Doorbell harsh,dav0r,http://creativecommons.org/publicdomain/zero/1.0/,"Doorbell,Alarm,Door,Domestic_sounds_and_home_sounds"
+eval/siren/117120.ogg,eval,siren,FSD50K / Freesound-ID 117120,siren_med.wav,UncleSigmund,http://creativecommons.org/publicdomain/zero/1.0/,"Motor_vehicle_(road),Siren,Vehicle,Alarm"

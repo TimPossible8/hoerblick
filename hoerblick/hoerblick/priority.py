@@ -22,7 +22,7 @@ CLASS_SPECS = {
 WARNING_LEVELS = {
     "Rot": {"icon": "!", "action": "Bitte sofort reagieren."},
     "Gelb": {"icon": "i", "action": "Ein Ereignis mit möglichem Handlungsbedarf."},
-    "Grün": {"icon": "✓", "action": "Kein unmittelbarer Handlungsbedarf."},
+    "Grün": {"icon": "✓", "action": "Kein Zielsignal erkannt. Dies ist keine Entwarnung."},
 }
 
 
@@ -55,7 +55,14 @@ def warning_for_prediction(label: str, confidence: float) -> dict[str, str | flo
     key = normalize_label(label)
     spec = CLASS_SPECS[key]
     score = priority_score(key, confidence)
-    if key == "background" or confidence < 0.35:
+    if confidence < 0.35:
+        return {
+            "level": "Gelb", "icon": "?",
+            "title": f"Unsicher: {spec.label}",
+            "action": "Geräusch nicht sicher zugeordnet. Bitte die Umgebung prüfen.",
+            "score": score,
+        }
+    if key == "background":
         level = "Grün"
     elif score >= 0.45:
         level = "Rot" if key in {"alarm", "siren"} else "Gelb"

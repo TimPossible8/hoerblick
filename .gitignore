@@ -10,6 +10,8 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.venv-runtime/
+.venv-ml312/
 venv/
 
 # Streamlit and local secrets
@@ -20,6 +22,8 @@ venv/
 hoerblick/models/*/saved_model.pb
 hoerblick/models/*/variables/
 hoerblick/models/*/*.npz
+hoerblick/models/*/*.h5
+hoerblick/models/model_b/
 hoerblick/data/real_audio/
 *.log
 *.tmp

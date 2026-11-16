@@ -1,61 +1,143 @@
-const navItems = document.querySelectorAll("[data-screen]");
-const screens = document.querySelectorAll(".screen[data-view]");
-const audioFile = document.querySelector("#audio-file");
-const fileName = document.querySelector("#file-name");
-const modelOptions = document.querySelectorAll(".model-option");
-const modelHelp = document.querySelector("#model-help");
-const resultLabel = document.querySelector("#result-label");
-const analyseButton = document.querySelector("#analyse-button");
-const resetButton = document.querySelector("#reset-button");
-
+const $ = (selector) => document.querySelector(selector);
+const audioFile = $("#audio-file");
+const resultPanel = $("#analysis-result");
+const analyseButton = $("#analyse-button");
+const message = $("#analysis-message");
+let selectedModel = "own", statuses = {}, busy = false, requestVersion = 0;
 const modelCopy = {
-  own: { help: "Mit eigenen Aufnahmen auf die vier Projektklassen trainiert.", label: "Eigenes Modell" },
-  yamnet: { help: "Vortrainiertes Modell mit Mapping auf die Projektklassen.", label: "YAMNet" },
+  own: "Eigenes Keras-Modell · vier Projektklassen · 448 Audiomerkmale.",
+  yamnet: "YAMNet · 521 AudioSet-Klassen, auf vier Projektklassen abgebildet.",
 };
-
-function showScreen(screenName) {
-  screens.forEach((screen) => screen.classList.toggle("is-visible", screen.dataset.view === screenName));
-  document.querySelectorAll(".bottom-nav-item").forEach((item) => {
-    const isActive = item.dataset.screen === screenName;
-    item.classList.toggle("is-active", isActive);
-    item.setAttribute("aria-current", isActive ? "page" : "false");
-  });
-  window.scrollTo({ top: 0, behavior: "smooth" });
+function setMessage(text, isError = false) {
+  message.textContent = text;
+  message.classList.toggle("is-error", isError);
 }
-
-navItems.forEach((item) => item.addEventListener("click", () => showScreen(item.dataset.screen)));
-
-audioFile.addEventListener("change", () => {
-  const selectedFile = audioFile.files?.[0];
-  fileName.textContent = selectedFile ? selectedFile.name : "Noch keine Datei ausgewählt";
-});
-
-modelOptions.forEach((option) => {
-  option.addEventListener("click", () => {
-    const model = option.dataset.model;
-    modelOptions.forEach((item) => {
-      const isSelected = item === option;
-      item.classList.toggle("is-selected", isSelected);
-      item.setAttribute("aria-selected", isSelected ? "true" : "false");
+function invalidateResult() {
+  requestVersion += 1;
+  resultPanel.hidden = true;
+  setMessage("");
+}
+function updateControls() {
+  analyseButton.disabled = busy || !audioFile.files?.length || !statuses[selectedModel]?.ready;
+  $("#model-help").textContent = `${modelCopy[selectedModel]} ${statuses[selectedModel]?.message || "Modellstatus wird geprüft …"}`;
+  analyseButton.innerHTML = busy
+    ? '<span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span> Analyse läuft …'
+    : '<span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span> Analyse starten';
+}
+document.querySelectorAll("[data-screen]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".screen").forEach((screen) => screen.classList.toggle("is-visible", screen.dataset.view === button.dataset.screen));
+    document.querySelectorAll(".bottom-nav-item").forEach((item) => {
+      const active = item.dataset.screen === button.dataset.screen;
+      item.classList.toggle("is-active", active);
+      if (active) item.setAttribute("aria-current", "page");
+      else item.removeAttribute("aria-current");
     });
-    modelHelp.textContent = modelCopy[model].help;
-    resultLabel.textContent = `${modelCopy[model].label} · Demo`;
+    window.scrollTo({ top: 0, behavior: "auto" });
   });
 });
-
-analyseButton.addEventListener("click", () => {
-  analyseButton.classList.add("is-loading");
-  analyseButton.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span> Analyse läuft';
-  window.setTimeout(() => {
-    analyseButton.classList.remove("is-loading");
-    analyseButton.innerHTML = '<span class="material-symbols-rounded">check</span> Analyse abgeschlossen';
-    resultLabel.textContent = "Demoergebnis";
-  }, 420);
+audioFile.addEventListener("change", () => {
+  invalidateResult();
+  $("#file-name").textContent = audioFile.files?.[0]?.name || "Noch keine Datei ausgewählt";
+  updateControls();
 });
-
-resetButton.addEventListener("click", () => {
-  resultLabel.textContent = "Demoergebnis";
-  analyseButton.innerHTML = '<span class="material-symbols-rounded">graphic_eq</span> Analyse starten';
+document.querySelectorAll(".model-option").forEach((button) => {
+  button.addEventListener("click", () => {
+    selectedModel = button.dataset.model;
+    invalidateResult();
+    document.querySelectorAll(".model-option").forEach((item) => {
+      item.classList.toggle("is-selected", item === button);
+      item.setAttribute("aria-pressed", String(item === button));
+    });
+    updateControls();
+  });
+});
+analyseButton.addEventListener("click", async () => {
+  const file = audioFile.files?.[0];
+  if (!file || busy) return;
+  invalidateResult();
+  if (file.size > 25 * 1024 * 1024) return setMessage("Die Datei ist zu groß. Maximal 25 MB sind erlaubt.", true);
+  const version = requestVersion, model = selectedModel;
+  busy = true;
+  updateControls();
+  setMessage("Die ersten fünf Sekunden werden lokal analysiert …");
+  try {
+    const response = await fetch(`/api/analyse?model=${model}`, {
+      method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file,
+    });
+    const result = await response.json();
+    if (version !== requestVersion) return;
+    if (!response.ok) throw new Error(result.error || "Die Analyse ist fehlgeschlagen.");
+    const colors = { Rot: "red", Gelb: "yellow", Grün: "green" };
+    const icons = { Rot: "priority_high", Gelb: "info", Grün: "check" };
+    resultPanel.className = `warning-panel warning-panel--${colors[result.warning.level]}`;
+    $("#warning-symbol").textContent = icons[result.warning.level];
+    $("#warning-level-text").textContent = `Warnstufe ${result.warning.level}`;
+    $("#result-label").textContent = result.model_name;
+    $("#result-title").textContent = result.warning.title;
+    $("#result-description").textContent = result.warning.action;
+    const percent = Math.round(result.confidence * 100);
+    $("#confidence-value").textContent = `${percent} %`;
+    $("#confidence-bar").style.width = `${percent}%`;
+    $("#result-details").textContent = [
+      result.source_label ? `YAMNet-Klasse: ${result.source_label}.` : "Klasse: " + result.label + ".",
+      `Analyse: ${Math.round(result.elapsed_ms)} ms.`, `Priorität: ${result.warning.score.toFixed(3)}.`,
+    ].join(" ");
+    resultPanel.hidden = false;
+    setMessage("Analyse abgeschlossen. Modellscore ist keine garantierte Trefferwahrscheinlichkeit.");
+    resultPanel.scrollIntoView({ behavior: "auto", block: "center" });
+  } catch (error) {
+    if (version === requestVersion) setMessage(error.message || "Lokaler Server nicht erreichbar.", true);
+  } finally {
+    busy = false;
+    updateControls();
+  }
+});
+$("#reset-button").addEventListener("click", () => {
+  invalidateResult();
   audioFile.value = "";
-  fileName.textContent = "Noch keine Datei ausgewählt";
+  $("#file-name").textContent = "Noch keine Datei ausgewählt";
+  updateControls();
 });
+async function loadStatus() {
+  try {
+    const response = await fetch("/api/status");
+    if (!response.ok) throw new Error("Status nicht verfügbar");
+    statuses = await response.json();
+    const ready = Object.values(statuses).filter((s) => s.ready).length;
+    $("#connection-status").textContent = `${ready}/2 Modelle geladen`;
+    for (const key of ["own", "yamnet"]) $("#status-" + key).textContent = statuses[key].ready ? "Modell geladen" : "Nicht verfügbar";
+    if (!ready) setMessage("Modelle nicht verfügbar. Details unter der Modellwahl.", true);
+  } catch {
+    $("#connection-status").textContent = "Server nicht erreichbar";
+    setMessage("Bitte Start-HoerBlick.ps1 starten und http://127.0.0.1:8765 öffnen.", true);
+  }
+  updateControls();
+}
+async function loadComparison() {
+  try {
+    const response = await fetch("/api/comparison");
+    if (!response.ok) throw new Error("Vergleich nicht verfügbar");
+    const { rows, metadata } = await response.json();
+    const table = $("#comparison-body");
+    table.replaceChildren();
+    rows.forEach((row) => {
+      const element = document.createElement("div");
+      element.className = "comparison-row";
+      ["Kriterium", "Eigenes Modell", "YAMNet"].forEach((key, index) => {
+        const cell = document.createElement(index ? "span" : "strong");
+        cell.textContent = row[key];
+        element.append(cell);
+      });
+      table.append(element);
+    });
+    $("#comparison-note").textContent = metadata.count
+      ? `${metadata.count} identische Testdateien · ${metadata.dataset_label}. Kleine Stichprobe; keine allgemeine Erkennungsleistung. Zeit ohne Laden/Aufwärmen.`
+      : "Noch kein Vergleichslauf gespeichert.";
+  } catch {
+    $("#comparison-note").textContent = "Vergleichsdaten nicht erreichbar.";
+  }
+}
+updateControls();
+loadStatus();
+loadComparison();

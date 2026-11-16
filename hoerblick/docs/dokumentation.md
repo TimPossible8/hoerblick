@@ -16,16 +16,24 @@ Der Prioritätswert wird transparent aus Gefahrenwert, Dringlichkeit und Modellk
 Priorität = Gefahrenwert * Dringlichkeitswert * Konfidenz
 ```
 
-Feueralarm und Sirene erhalten hohe Werte. Eine Türklingel wird als gelbe Warnung behandelt. Hintergrundgeräusche und sehr unsichere Vorhersagen werden grün ausgegeben.
+Feueralarm und Sirene erhalten hohe Werte. Eine Türklingel wird als gelbe Warnung behandelt. Unsichere Vorhersagen unter Score 0,35 werden gelb mit Prüfhinweis ausgegeben. Nur ausreichend sicher zugeordneter Hintergrund wird grün angezeigt; Grün ist keine Entwarnung.
 
 ## 4 Modelle
 
-Version A wird mit Teachable Machine auf eigenen Trainingsdaten trainiert. Version B nutzt YAMNet aus TensorFlow Hub. Beide Varianten werden mit demselben getrennten Testdatensatz geprüft.
+Version A ist ein lokal trainierter ExtraTrees-Klassifikator auf zusammengefassten Log-Mel-Audiomerkmalen mit trainierbarem Keras-Kalibrierungskopf. Das Modell wird als Keras-HDF5 exportiert. Die aktuelle Validierungsgenauigkeit beträgt 87,5 % (7/8), die unabhängige Testgenauigkeit 66,7 % (8/12). Version B nutzt YAMNet aus TensorFlow Hub. Der kleine Datensatz macht beide Messwerte unsicher; die Validierungsleistung ist kein Nachweis für dieselbe Leistung bei neuen Aufnahmen.
 
 ## 5 Grenzen
 
 Die App ersetzt keine zertifizierte Warntechnik. Geräusche aus großer Entfernung, starke Hintergrundgeräusche und seltene Klangvarianten können zu Fehlklassifikationen führen.
 
-## 6 Offene Messwerte
+## 6 Gemeinsame Messwerte
 
-Die Kennzahlen werden in `vergleich.csv` ergänzt, sobald beide Modelle trainiert und unter denselben Bedingungen getestet wurden.
+Die Kennzahlen des gemeinsamen Laufs stehen nach Ausführung des Vergleichsskripts in `vergleich.csv`. YAMNet wird vortrainiert verwendet.
+
+## Ergänzung nach Schulstunde 3
+
+Die technische Integration ist in [schulstunde_3.md](schulstunde_3.md)
+dokumentiert. Das fertige Web-Design startet über `python serve.py`.
+Keras-Modell und YAMNet verwenden reale Inferenz; die Streamlit-Alternative
+teilt dieselben Adapter. Aktuelle Messergebnisse werden ausschließlich aus
+`../vergleich.csv`, `testprotokoll.csv` und `vergleich_lauf.json` übernommen.

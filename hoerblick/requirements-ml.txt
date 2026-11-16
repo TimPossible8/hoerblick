@@ -1,7 +1,10 @@
 # Optional dependencies for the two real model variants.
 # Install this file after the core app is working.
-tensorflow>=2.16,<3
+tensorflow>=2.20,<2.22
+tf-keras>=2.20,<2.22
 tensorflow-hub>=0.16,<1
+# TensorFlow Hub 0.16 imports pkg_resources.
+setuptools>=70,<81
 librosa>=0.10,<1
 scikit-learn>=1.5,<2
 imageio-ffmpeg>=0.5,<1

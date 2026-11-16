@@ -1,7 +1,6 @@
 Kriterium,Eigenes Modell,YAMNet
-Accuracy,noch nicht gemessen,noch nicht gemessen
-Recall Alarm,noch nicht gemessen,noch nicht gemessen
-Recall Sirene,noch nicht gemessen,noch nicht gemessen
-Fehlalarmrate,noch nicht gemessen,noch nicht gemessen
-Analysezeit,noch nicht gemessen,noch nicht gemessen
-Trainings- und Integrationsaufwand,zu dokumentieren,zu dokumentieren
+Accuracy,66.7%,50.0%
+Recall Alarm,66.7%,66.7%
+Recall Sirene,100.0%,66.7%
+Fehlalarmrate,50.0%,50.0%
+Analysezeit (Median),2181 ms,42 ms

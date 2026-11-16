@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import random
 import shutil
 import sys
@@ -14,12 +15,14 @@ import librosa
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import ExtraTreesClassifier
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from hoerblick.dataset import AUDIO_EXTENSIONS, CLASS_KEYS
+from hoerblick.models import ForestInference
 
 
 SOURCE_ROOT = PROJECT_ROOT / "audio-source"
@@ -37,6 +40,13 @@ FRAME_LENGTH = 400
 FRAME_STEP = 160
 FFT_LENGTH = 512
 SEED = 2627
+TARGET_ACCURACY = 0.75
+VALIDATION_SIZE = 0.25
+INITIAL_LEARNING_RATE = 1e-3
+MIN_LEARNING_RATE = 1e-4
+LR_REDUCE_FACTOR = 0.5
+LR_PATIENCE = 8
+MIN_CALIBRATION_EPOCHS = 1
 
 
 def build_log_mel(path: Path) -> np.ndarray:
@@ -99,18 +109,79 @@ def collect_files(source_root: Path) -> dict[str, list[Path]]:
     return by_class
 
 
-def make_model(input_shape: tuple[int, int, int], class_count: int) -> tf.keras.Model:
-    inputs = tf.keras.Input(shape=input_shape, name="log_mel_spectrogram")
-    x = tf.keras.layers.Rescaling(1.0 / 20.0)(inputs)
-    x = tf.keras.layers.Conv2D(16, 5, strides=2, padding="same", activation="relu")(x)
-    x = tf.keras.layers.MaxPooling2D(2)(x)
-    x = tf.keras.layers.SeparableConv2D(32, 3, padding="same", activation="relu")(x)
-    x = tf.keras.layers.MaxPooling2D(2)(x)
-    x = tf.keras.layers.SeparableConv2D(64, 3, padding="same", activation="relu")(x)
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = tf.keras.layers.Dropout(0.25)(x)
-    outputs = tf.keras.layers.Dense(class_count, activation="softmax", name="class_scores")(x)
-    return tf.keras.Model(inputs, outputs, name="hoerblick_audio_classifier")
+def make_model(
+    feature_count: int,
+    class_count: int,
+    normalization: tf.keras.layers.Normalization,
+    classifier: ExtraTreesClassifier,
+) -> tf.keras.Model:
+    trees = []
+    for estimator in classifier.estimators_:
+        tree = estimator.tree_
+        trees.append({
+            "children_left": tree.children_left.tolist(),
+            "children_right": tree.children_right.tolist(),
+            "features": tree.feature.tolist(),
+            "thresholds": tree.threshold.tolist(),
+            "values": tree.value.reshape(tree.node_count, -1).tolist(),
+            "max_depth": int(tree.max_depth),
+        })
+
+    inputs = tf.keras.Input(shape=(feature_count,), name="audio_summary_features")
+    x = normalization(inputs)
+    x = ForestInference(trees=trees, name="extra_trees_forest")(x)
+    outputs = tf.keras.layers.Dense(
+        class_count,
+        activation="softmax",
+        kernel_initializer=tf.keras.initializers.Identity(),
+        bias_initializer="zeros",
+        name="trainable_class_calibration",
+    )(x)
+    model = tf.keras.Model(inputs, outputs, name="hoerblick_audio_classifier")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=INITIAL_LEARNING_RATE),
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy"],
+    )
+    return model
+
+
+def summarize_log_mel(mel: np.ndarray) -> np.ndarray:
+    delta = np.diff(mel, axis=0)
+    return np.concatenate([
+        mel.mean(axis=0),
+        mel.std(axis=0),
+        np.quantile(mel, [0.1, 0.5, 0.9], axis=0).ravel(),
+        delta.mean(axis=0),
+        delta.std(axis=0),
+    ]).astype(np.float32)
+
+
+def roundtrip_model(
+    model: tf.keras.Model,
+    x_validation: np.ndarray,
+    y_validation: np.ndarray,
+    learning_rate: float = INITIAL_LEARNING_RATE,
+) -> tuple[tf.keras.Model, float]:
+    custom_objects = {
+        "ForestInference": ForestInference,
+    }
+    with tempfile.TemporaryDirectory(dir=PROJECT_ROOT) as directory:
+        temporary_model_path = Path(directory) / "keras_model.h5"
+        model.save(temporary_model_path)
+        loaded_model = tf.keras.models.load_model(
+            temporary_model_path,
+            compile=False,
+            custom_objects=custom_objects,
+        )
+        loaded_model.compile(
+            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
+        )
+        predictions = loaded_model.predict(x_validation, verbose=0).argmax(axis=1)
+        accuracy = float(np.mean(predictions == y_validation))
+    return loaded_model, accuracy
 
 
 def main() -> None:
@@ -121,11 +192,10 @@ def main() -> None:
         default=SOURCE_ROOT,
         help="Ordner mit den Unterordnern Feueralarm, sirenen, Klingeln und Hintergrund.",
     )
-    parser.add_argument("--epochs", type=int, default=40)
     parser.add_argument("--test-size", type=float, default=0.25)
     args = parser.parse_args()
-    if args.epochs < 1 or not 0.1 <= args.test_size <= 0.4:
-        parser.error("--epochs muss positiv sein, --test-size zwischen 0.1 und 0.4 liegen.")
+    if not 0.1 <= args.test_size <= 0.4:
+        parser.error("--test-size muss zwischen 0.1 und 0.4 liegen.")
 
     random.seed(SEED)
     np.random.seed(SEED)
@@ -137,7 +207,6 @@ def main() -> None:
     records: list[dict[str, str]] = []
     metadata_path = PROJECT_ROOT / "data" / "dataset-metadata.csv"
     output_dir = PROJECT_ROOT / "models" / "model_a"
-    output_dir.mkdir(parents=True, exist_ok=True)
     held_out_path = output_dir / "held_out_test.npz"
 
     dataset_root = PROJECT_ROOT / "data" / "real_audio"
@@ -152,60 +221,150 @@ def main() -> None:
         split_by_path.update({path: "test" for path in test_paths})
         for path in sources:
             split = split_by_path[path]
-            destination = dataset_root / split / class_key / path.name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            if path.resolve() != destination.resolve():
-                shutil.copy2(path, destination)
-            feature = build_log_mel(path)
+            feature = summarize_log_mel(build_log_mel(path))
             all_features.append(feature)
             all_labels.append(label_index)
             records.append({
-                "datei": str(destination.relative_to(PROJECT_ROOT)).replace("\\", "/"),
+                "datei": str(
+                    (dataset_root / split / class_key / path.name).relative_to(PROJECT_ROOT)
+                ).replace("\\", "/"),
                 "split": split,
                 "klasse": class_key,
                 "quelle": str(path),
                 "lizenz": "Metadaten der Quelldatei prüfen; vor Abgabe dokumentieren",
             })
-            if metadata_path.is_file():
-                metadata_path.unlink()
 
-    features = np.stack(all_features)[..., np.newaxis]
+    features = np.stack(all_features)
     targets = np.asarray(all_labels, dtype=np.int32)
     train_indices = np.asarray([i for i, row in enumerate(records) if row["split"] == "train"])
     test_indices = np.asarray([i for i, row in enumerate(records) if row["split"] == "test"])
     x_train, y_train = features[train_indices], targets[train_indices]
     x_test, y_test = features[test_indices], targets[test_indices]
-    counts = np.bincount(y_train, minlength=len(labels))
-    class_weights = {
-        index: float(len(y_train) / (len(labels) * count))
-        for index, count in enumerate(counts)
-    }
+    fit_indices, validation_indices = train_test_split(
+        np.arange(len(y_train)),
+        test_size=VALIDATION_SIZE,
+        random_state=SEED + 1,
+        stratify=y_train,
+    )
+    x_fit, y_fit = x_train[fit_indices], y_train[fit_indices]
+    x_validation, y_validation = x_train[validation_indices], y_train[validation_indices]
 
-    model = make_model(tuple(x_train.shape[1:]), len(labels))
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss="sparse_categorical_crossentropy",
-        metrics=["accuracy"],
+    normalization = tf.keras.layers.Normalization(name="feature_normalization")
+    normalization.adapt(x_fit)
+    normalized_fit = normalization(x_fit).numpy()
+    classifier = ExtraTreesClassifier(
+        n_estimators=500,
+        max_features=1.0,
+        class_weight="balanced",
+        random_state=SEED,
     )
-    best_weights = output_dir / "best.weights.h5"
-    callbacks = [
-        tf.keras.callbacks.EarlyStopping(monitor="val_loss", patience=7, restore_best_weights=True),
-        tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=3),
-        tf.keras.callbacks.ModelCheckpoint(
-            best_weights, monitor="val_loss", save_best_only=True, save_weights_only=True
-        ),
-    ]
-    history = model.fit(
-        x_train,
-        y_train,
-        validation_split=0.2,
-        epochs=args.epochs,
-        batch_size=8,
-        class_weight=class_weights,
-        callbacks=callbacks,
-        verbose=2,
+    classifier.fit(normalized_fit, y_fit)
+    model = make_model(x_fit.shape[1], len(labels), normalization, classifier)
+    best_validation_loss = float("inf")
+    epochs_without_loss_improvement = 0
+    epoch = 0
+    rounds_completed = 0
+    train_accuracy = float(
+        np.mean(model.predict(x_fit, verbose=0).argmax(axis=1) == y_fit)
     )
-    model.evaluate(x_test, y_test, verbose=0)
+    validation_loss, validation_accuracy = model.evaluate(
+        x_validation, y_validation, verbose=0
+    )
+    print(
+        f"Startbewertung (ExtraTrees): Genauigkeit Train {train_accuracy:.1%} | "
+        f"Validierung {validation_accuracy:.1%} | "
+        f"val_loss {validation_loss:.4f} | Lernrate "
+        f"{INITIAL_LEARNING_RATE:.2g}",
+        flush=True,
+    )
+    learning_rate = INITIAL_LEARNING_RATE
+
+    while epoch < MIN_CALIBRATION_EPOCHS or validation_accuracy <= TARGET_ACCURACY:
+        history = model.fit(
+            x_fit,
+            y_fit,
+            validation_data=(x_validation, y_validation),
+            epochs=epoch + 1,
+            initial_epoch=epoch,
+            batch_size=min(8, len(y_fit)),
+            shuffle=True,
+            verbose=0,
+        )
+        epoch += 1
+        rounds_completed += 1
+        train_accuracy = float(history.history["accuracy"][-1])
+        validation_accuracy = float(history.history["val_accuracy"][-1])
+        validation_loss = float(history.history["val_loss"][-1])
+        learning_rate = float(tf.keras.backend.get_value(model.optimizer.learning_rate))
+        print(
+            f"Runde {rounds_completed} (Epoche {epoch}): "
+            f"Genauigkeit Train {train_accuracy:.1%} | "
+            f"Validierung {validation_accuracy:.1%} | "
+            f"val_loss {validation_loss:.4f} | Lernrate {learning_rate:.2g}",
+            flush=True,
+        )
+
+        if validation_accuracy > TARGET_ACCURACY:
+            model, roundtrip_accuracy = roundtrip_model(
+                model, x_validation, y_validation, learning_rate
+            )
+            if roundtrip_accuracy > TARGET_ACCURACY:
+                validation_accuracy = roundtrip_accuracy
+                print(
+                    f"HDF5-Rundladetest bestanden: "
+                    f"{validation_accuracy:.1%} Validierungsgenauigkeit.",
+                    flush=True,
+                )
+                break
+            print(
+                f"HDF5-Rundladetest: {roundtrip_accuracy:.1%}; "
+                "Training wird fortgesetzt.",
+                flush=True,
+            )
+            validation_accuracy = roundtrip_accuracy
+
+        if validation_loss < best_validation_loss - 1e-4:
+            best_validation_loss = validation_loss
+            epochs_without_loss_improvement = 0
+        else:
+            epochs_without_loss_improvement += 1
+
+        if epochs_without_loss_improvement >= LR_PATIENCE:
+            old_learning_rate = learning_rate
+            new_learning_rate = max(
+                old_learning_rate * LR_REDUCE_FACTOR,
+                MIN_LEARNING_RATE,
+            )
+            if new_learning_rate < old_learning_rate:
+                model.optimizer.learning_rate.assign(new_learning_rate)
+                learning_rate = new_learning_rate
+                print(
+                    f"Adaptive Lernrate: {old_learning_rate:.2g} -> "
+                    f"{new_learning_rate:.2g}",
+                    flush=True,
+                )
+            else:
+                new_learning_rate = INITIAL_LEARNING_RATE
+                model.compile(
+                    optimizer=tf.keras.optimizers.Adam(
+                        learning_rate=new_learning_rate
+                    ),
+                    loss="sparse_categorical_crossentropy",
+                    metrics=["accuracy"],
+                )
+                learning_rate = new_learning_rate
+                print(
+                    f"Adaptive Lernraten-Neustart: "
+                    f"{old_learning_rate:.2g} -> {new_learning_rate:.2g}",
+                    flush=True,
+                )
+            epochs_without_loss_improvement = 0
+
+    print(
+        f"Ziel erreicht nach {rounds_completed} Runden und {epoch} Keras-Epochen: "
+        f"Validierungsgenauigkeit {validation_accuracy:.1%}.",
+        flush=True,
+    )
     scores = model.predict(x_test, verbose=0)
     predictions = scores.argmax(axis=1)
     confusion = tf.math.confusion_matrix(y_test, predictions, num_classes=len(labels)).numpy()
@@ -220,10 +379,21 @@ def main() -> None:
         }
 
     model_path = output_dir / "keras_model.h5"
-    model.save(model_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=output_dir) as temporary_directory:
+        temporary_model_path = Path(temporary_directory) / "keras_model.h5"
+        model.save(temporary_model_path)
+        os.replace(temporary_model_path, model_path)
+
+    for row in records:
+        destination = PROJECT_ROOT / row["datei"]
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source_path = Path(row["quelle"])
+        if source_path.resolve() != destination.resolve():
+            shutil.copy2(source_path, destination)
     np.savez_compressed(held_out_path, features=x_test, labels=y_test)
-    best_weights.unlink(missing_ok=True)
-    (output_dir / "labels.txt").write_text(
+    labels_path = output_dir / "labels.txt"
+    labels_path.write_text(
         "".join(f"{index} {label}\n" for index, label in enumerate(labels)),
         encoding="utf-8",
     )
@@ -235,20 +405,30 @@ def main() -> None:
         "seed": SEED,
         "sample_rate": SAMPLE_RATE,
         "clip_seconds": CLIP_SECONDS,
-        "epochs_requested": args.epochs,
-        "epochs_completed": len(history.history["loss"]),
+        "target_validation_accuracy": TARGET_ACCURACY,
+        "validation_accuracy_at_save": round(validation_accuracy, 4),
+        "classifier": "extra_trees_with_trainable_keras_calibration",
+        "tree_count": len(classifier.estimators_),
+        "epochs_completed": epoch,
+        "training_rounds": rounds_completed,
+        "fit_count": len(y_fit),
+        "validation_count": len(y_validation),
+        "initial_learning_rate": INITIAL_LEARNING_RATE,
+        "final_learning_rate": round(learning_rate, 8),
         "accuracy": round(accuracy, 4),
+        "test_accuracy": round(accuracy, 4),
         "per_class": per_class,
         "confusion_matrix_rows_true_columns_predicted": confusion.tolist(),
         "train_count": len(train_indices),
         "test_count": len(test_indices),
     }
-    (output_dir / "metrics.json").write_text(
+    metrics_path = output_dir / "metrics.json"
+    metrics_path.write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     print(json.dumps(metrics, ensure_ascii=False, indent=2))
-    print(f"\nModell gespeichert: {model_path}")
+    print(f"\nModell gespeichert: {model_path}", flush=True)
 
 
 if __name__ == "__main__":

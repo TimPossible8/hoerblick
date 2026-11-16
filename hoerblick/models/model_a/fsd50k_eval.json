@@ -1,0 +1,36 @@
+{
+  "dataset": "FSD50K official eval mirror",
+  "n": 4,
+  "accuracy": 0.75,
+  "items": [
+    {
+      "id": "210513",
+      "actual": "alarm",
+      "predicted": "siren",
+      "confidence": 0.3719,
+      "correct": false
+    },
+    {
+      "id": "404010",
+      "actual": "background",
+      "predicted": "background",
+      "confidence": 0.3344,
+      "correct": true
+    },
+    {
+      "id": "330400",
+      "actual": "doorbell",
+      "predicted": "doorbell",
+      "confidence": 0.4694,
+      "correct": true
+    },
+    {
+      "id": "117120",
+      "actual": "siren",
+      "predicted": "siren",
+      "confidence": 0.4469,
+      "correct": true
+    }
+  ],
+  "note": "Exploratory only: HF mirror exposes only a subset of official FSD50K. Classes and licenses audited against official ground truth and clip metadata."
+}

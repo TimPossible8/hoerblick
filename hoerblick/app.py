@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
+import json
+from time import perf_counter
 
 import pandas as pd
 import streamlit as st
@@ -176,6 +179,16 @@ def inject_styles() -> None:
             border-radius: 999px;
             font-weight: 800;
         }
+        :root {
+            --hb-ink: #18202c; --hb-muted: #626c79; --hb-surface: #f6f8fb;
+            --hb-primary: #3159c7; --hb-primary-soft: #dfe7ff;
+            --hb-coral: #bf3e38; --hb-amber: #865400; --hb-mint: #187a66;
+        }
+        .block-container { max-width: 780px; padding-top: 2rem; }
+        .hb-panel, .hb-warning { border-radius: 22px; }
+        .hb-status, div[data-testid="stFileUploaderDropzone"] { border-radius: 17px; }
+        .stButton > button { min-height: 52px; }
+        .hb-warning.grün { background: var(--hb-mint); }
         </style>
         """,
         unsafe_allow_html=True,
@@ -210,9 +223,11 @@ def render_warning(result: ModelResult) -> None:
     st.progress(float(result.confidence), text=f"Modellkonfidenz: {result.confidence:.0%}")
     if result.is_demo:
         st.info(
-            "Demo-Modus: Für die echte Bewertung müssen die exportierte Modell-Datei "
-            "und die optionalen ML-Abhängigkeiten ergänzt werden."
+            "Demo-Modus: Dies ist ein synthetisches Ergebnis, kein Modelllauf."
         )
+    if result.source_label:
+        st.caption(f"Originalklasse bei YAMNet: {result.source_label}")
+    st.caption("Modellscores sind keine garantierten Trefferwahrscheinlichkeiten.")
 
 
 def analyse_page() -> None:
@@ -227,8 +242,8 @@ def analyse_page() -> None:
     with upload_col:
         st.subheader("Audiodatei auswählen")
         uploaded_file = st.file_uploader(
-            "WAV, MP3 oder FLAC",
-            type=["wav", "mp3", "flac"],
+            "WAV, MP3, FLAC oder OGG",
+            type=["wav", "mp3", "flac", "ogg"],
             help="Für die Prüfung werden dieselben Dateien für beide Modellvarianten verwendet.",
         )
 
@@ -243,7 +258,12 @@ def analyse_page() -> None:
         model_key = "own" if selected_model == "Eigenes Modell" else "yamnet"
         status = model_status(model_key, PROJECT_ROOT)
         st.caption(status["message"])
-        analyse_clicked = st.button("Analyse starten", type="primary", width="stretch")
+        analyse_clicked = st.button("Analyse starten", type="primary", width="stretch",
+                                    disabled=uploaded_file is None or not status["ready"])
+    st.caption("Beide Modelle analysieren die ersten fünf Sekunden lokal mit 16 kHz Mono.")
+    identity = (model_key, hashlib.sha256(uploaded_file.getvalue()).hexdigest()) if uploaded_file else None
+    if st.session_state.get("result_identity") != identity:
+        st.session_state.pop("analysis_result", None)
 
     if analyse_clicked:
         if uploaded_file is None:
@@ -252,32 +272,35 @@ def analyse_page() -> None:
         with st.spinner("Audiodatei wird analysiert ..."):
             adapter = get_model_adapter(model_key, PROJECT_ROOT)
             try:
+                started = perf_counter()
                 result = adapter.predict(uploaded_file.getvalue(), uploaded_file.name)
+                st.session_state["analysis_ms"] = (perf_counter() - started) * 1000
+                st.session_state["analysis_result"] = result
+                st.session_state["result_identity"] = identity
             except Exception as exc:
-                st.warning(f"Echter Modelllauf noch nicht verfügbar: {exc}")
-                fallback_name = "Eigenes Modell" if model_key == "own" else "YAMNet"
-                result = get_model_adapter("demo", PROJECT_ROOT).predict(
-                    uploaded_file.getvalue(), uploaded_file.name
-                )
-                result = ModelResult(
-                    label=result.label,
-                    confidence=result.confidence,
-                    model_name=f"{fallback_name} (Demo-Modus)",
-                    is_demo=True,
-                )
+                st.session_state.pop("analysis_result", None)
+                st.error(f"Analyse fehlgeschlagen: {exc}")
+                return
+    if "analysis_result" in st.session_state:
+        result = st.session_state["analysis_result"]
         st.write("")
         st.subheader("Analyseergebnis")
         render_warning(result)
         st.caption(f"Verwendeter Analyseweg: {result.model_name}")
+        st.caption(f"Analysezeit: {st.session_state['analysis_ms']:.0f} ms")
 
 
 def comparison_page() -> None:
-    st.markdown('<div class="hb-kicker">Schulstunde 5</div>', unsafe_allow_html=True)
+    st.markdown('<div class="hb-kicker">Identische Testdateien</div>', unsafe_allow_html=True)
     st.header("Vergleich der Modellvarianten")
     st.write(
         "Beide Modelle werden mit demselben getrennten Testdatensatz geprüft. "
-        "Die Tabelle ist vorbereitet und kann nach den Messungen ergänzt werden."
+        "Die Messwerte stammen aus dem gespeicherten Vergleichslauf."
     )
+    report_path = PROJECT_ROOT / "docs" / "vergleich_lauf.json"
+    if report_path.exists():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        st.caption(f"{report['count']} Dateien · {report['dataset_label']}. Kleine Stichprobe; keine allgemeine Erkennungsleistung.")
     table = load_comparison_table(PROJECT_ROOT / "vergleich.csv")
     st.dataframe(table, width="stretch", hide_index=True)
     st.download_button(
@@ -376,7 +399,7 @@ def about_page() -> None:
             <p>Der Prototyp ist keine zertifizierte Sicherheitslösung und ersetzt keine
             normgeprüften Rauchmelder. Hintergrundgeräusche, Reichweite und Datenschutz
             beeinflussen die Erkennung.</p>
-            <p>YAMNet: TensorFlow Hub, Apache-2.0. Eigene Modellvariante: Teachable Machine.
+            <p>YAMNet: TensorFlow Hub, Apache-2.0. Eigenes Modell: Extra Trees mit Keras-Kalibrierung.
             Vollständige Quellen stehen in der README und Dokumentation.</p>
             </div>
             """,
@@ -386,28 +409,11 @@ def about_page() -> None:
 
 def main() -> None:
     inject_styles()
-    with st.sidebar:
-        st.markdown("## HörBlick")
-        st.caption("Material 3 Expressive inspiriertes Prüfungsprototyp")
-        page = st.radio(
-            "Navigation",
-            ["Analyse", "Training", "Vergleich", "Über"],
-            label_visibility="collapsed",
-        )
-        st.divider()
-        st.markdown("**Status der ersten Schulstunde**")
-        st.write("Projektstruktur angelegt")
-        st.write("Datenordner vorbereitet")
-        st.write("Streamlit-Grundgerüst aktiv")
-        st.markdown("**Status der zweiten Schulstunde**")
-        own_status = model_status("own", PROJECT_ROOT)
-        st.write("Trainingsdaten geprüft")
-        st.write("Eigenes Modell exportiert" if own_status["ready"] else "Export noch offen")
+    page = st.radio("Navigation", ["Analyse", "Vergleich", "Über"],
+                    horizontal=True, label_visibility="collapsed")
 
     if page == "Analyse":
         analyse_page()
-    elif page == "Training":
-        training_page()
     elif page == "Vergleich":
         comparison_page()
     else:

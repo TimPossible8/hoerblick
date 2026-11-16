@@ -4,36 +4,93 @@ HörBlick ist ein Streamlit-Prototyp für die Klausurersatzleistung Informatik. 
 
 Die Gestaltung orientiert sich an Material 3 Expressive: klare Typografie, kontrastreiche Warnstufen, funktionale Farbcodierung, große Bedienelemente und eine ruhige Oberfläche mit einzelnen expressiven Akzenten.
 
-## Stand nach der zweiten Schulstunde
+## Stand nach der dritten Schulstunde
+
+Das fertige mobile Design ist mit echten Modellläufen verbunden:
+
+- Web-Oberfläche mit Upload, Modellwahl, Warnstufe und Vergleichsdownload
+- vorhandenes Keras-Modell (Extra Trees mit Keras-Kalibrierung)
+- vortrainiertes YAMNet mit überprüftem AudioSet-Mapping
+- gemeinsame Eingabe: erste fünf Sekunden, Mono, 16 kHz
+- echte Fehleranzeigen statt automatisch erzeugter Demoergebnisse
+- reproduzierbarer Vergleich mit `scripts/compare_models.py`
+
+Die vollständige Umsetzung und Grenzen stehen in
+[docs/schulstunde_3.md](docs/schulstunde_3.md).
+
+### Fertiges Design starten
+
+Im Projekt-Hauptordner `Start-HoerBlick.ps1` ausführen und
+`http://127.0.0.1:8765` im Browser öffnen. Alternativ aus diesem Ordner:
+
+```powershell
+.\.venv-ml312\Scripts\python.exe serve.py
+```
+
+Diese geprüfte Laufzeit verwendet Python 3.12. Die alte `.venv` enthält
+inkompatible 3.12-Binärpakete bei einem 3.13-Interpreter. `.venv-ml312` wird
+deshalb für den lokalen Start bevorzugt. Das vorhandene Modell bleibt
+in `models/model_a/`. YAMNet wird beim ersten Laden aus TensorFlow Hub
+heruntergeladen; danach wird der lokale Cache genutzt.
+
+Der HTML-Doppelklick allein startet keinen Python-Server.
+Ohne Server wird „Server nicht erreichbar“ angezeigt.
+
+### Installation auf einem anderen Computer
+
+Python 3.12 verwenden, dann:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-ml.txt
+.\.venv\Scripts\python.exe serve.py
+```
+
+`keras_model.h5` und `labels.txt` müssen als lokaler Export vorhanden sein.
+Die Gewichte werden durch diese Änderung nicht neu trainiert.
+
+### Streamlit-Alternative und Vergleich
+
+```powershell
+.\.venv-ml312\Scripts\python.exe -m streamlit run app.py
+.\.venv-ml312\Scripts\python.exe scripts/compare_models.py
+.\.venv-ml312\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+### Online-Demo mit Streamlit Community Cloud
+
+Beim Deployment dieses GitHub-Repositories als App den Hauptordner `hoerblick/`
+und die Datei `app.py` auswählen. `requirements.txt` installiert auch die
+ML-Abhängigkeiten für die Modelladapter. Modellgewichte werden nicht mit Git
+bereitgestellt; in der Cloud ist deshalb YAMNet nutzbar, während „Eigenes
+Modell“ ohne separat bereitgestellten Export nicht verfügbar ist. YAMNet wird
+beim ersten Laden von TensorFlow Hub geladen.
+
+Streamlit verwendet dieselben Modelladapter und aktualisierten Warnstufen.
+Die originalgetreue mobile Designumsetzung wird mit `serve.py` gestartet.
+Upload-Dateien werden nicht gespeichert. Beim lokalen Betrieb erfolgt
+die Audioberechnung auf diesem Computer.
+
+## Basis aus den ersten beiden Schulstunden
 
 Die technische Basis ist vorbereitet:
 
 - Streamlit-Grundgerüst mit den Seiten `Analyse`, `Vergleich` und `Über`
 - vorbereitete Datenstruktur für Training und Test
 - Trainingsdatenprüfung mit getrennten Klassen- und Testordnern
-- Trainingsprotokoll für das eigene Teachable-Machine-Modell
-- Teachable-Machine-Keras-Import mit `keras_model.h5` und `labels.txt`
+- Trainingsprotokoll für das eigene lokal trainierte Modell
+- Keras-Import mit `keras_model.h5` und `labels.txt`
 - Adapter-Struktur für das eigene Modell und YAMNet
 - transparente Prioritäts- und Warnstufenlogik
 - vorbereitete Vergleichstabelle
 - README, Dokumentationsgerüst und KI-Reflexion
 
-Solange keine echten Modelle installiert oder exportiert sind, läuft die App im eindeutig gekennzeichneten Demo-Modus. Dateinamen wie `alarm_demo.wav`, `siren_demo.wav` oder `doorbell_demo.wav` werden dafür automatisch erkannt. Der Trainingsstatus ist in der App unter `Training` sichtbar.
+Der frühere Demo-Adapter bleibt im Code für Entwicklungszwecke vorhanden.
+Die nutzbaren Oberflächen erzeugen bei Modellfehlern keine Demo-Vorhersage.
 
-## Start
-
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-streamlit run app.py
-```
-
-Für die späteren Modellvarianten:
-
-```powershell
-python -m pip install -r requirements-ml.txt
-```
+Für den Start gelten die oben beschriebenen Befehle mit Python 3.12 und
+beiden Abhängigkeitsdateien. `requirements-tested.txt` hält die tatsächlich
+geprüften Paketversionen fest.
 
 ## Datenstruktur
 
@@ -61,15 +118,12 @@ Die Datenprüfung und der Exportpfad sind vorbereitet:
 python scripts/check_dataset.py
 ```
 
-Danach wird in Teachable Machine ein Audioprojekt mit den vier Klassen angelegt.
-Nur die Dateien aus `data/train/` werden hochgeladen. Nach dem Training wird das
-Keras-Modell nach `models/model_a/` exportiert. Dort müssen mindestens diese
-beiden Dateien liegen:
+Das lokale Keras-Modell wird mit den Aufnahmen aus `audio-source/` trainiert.
+Der Befehl erstellt
+reproduzierbar einen dateiweisen Train/Test-Split und exportiert das Modell:
 
-```text
-models/model_a/
-  keras_model.h5
-  labels.txt
+```powershell
+python scripts/train_keras_model.py
 ```
 
 Für einen lokal reproduzierbaren technischen Testdatensatz kann dieser Befehl
@@ -87,25 +141,27 @@ Aufnahmen ersetzt werden.
 
 Der Import liest die Labeldatei, lädt die Audiodatei mit Mono und 16 kHz und
 bereitet die Audioeingabe passend zur Form des exportierten Keras-Modells vor.
-Die Ergebnisse werden weiterhin als Demonstration behandelt, bis der Vergleich
-mit dem getrennten Testdatensatz durchgeführt wurde.
+Die Ergebnisse bleiben auch nach dem ersten Vergleich eine Demonstration:
+Die kleine Testmenge belegt keine zuverlässige Erkennung im Alltag.
 
 ## Aktueller Modellcheck
 
-Der kleine lokale Modellcheck in `models/model_a/` ist eingecheckt. Er wurde mit
-30 Trainings- und 12 Testdateien aus einem separaten realen Audioset erzeugt.
-Die Accuracy liegt bei 25 %. Alle Testdateien wurden als `alarm` erkannt; die
-Recall-Werte für Sirene, Klingel und Hintergrund sind deshalb 0 %. Das Ergebnis
-ist ein dokumentierter Zwischenstand und keine belastbare Modellleistung.
+Das lokale Modell in `models/model_a/` wurde mit 42 Aufnahmen trainiert: 30
+Trainingsdateien und 12 dateiweise zurückgehaltene Testdateien. Die separate
+Validierung innerhalb des Trainingssatzes erreicht 87,5 % (7/8); der HDF5-
+Rundladetest bestätigt denselben Wert. Auf dem unangetasteten Testsatz erreicht
+das exportierte Modell 66,7 % (8/12) und liegt damit unter 75 %. Die kleine
+Validierungs- und Testmenge erlaubt keine belastbare Aussage zur Erkennung neuer
+Aufnahmen; das Modell ist keine verlässliche Warntechnik.
 
 Die großen Quelldateien und das abgeleitete Test-Array bleiben außerhalb von
 Git. Die Messwerte stehen in `models/model_a/metrics.json`.
 
-## Geplanter weiterer Ablauf
+## Weiterer Ablauf
 
-1. Eigenes Modell mit Teachable Machine trainieren und nach `models/model_a/` exportieren.
-2. YAMNet mit TensorFlow Hub einbinden und auf die Projektklassen abbilden.
-3. Beide Modellvarianten mit demselben Testdatensatz messen.
+1. Weitere rechtlich geklärte Aufnahmen sammeln, besonders für `alarm` und `background`.
+2. Den ersten gemeinsamen Vergleich auswerten und mit weiteren unabhängigen Aufnahmen erweitern.
+3. Lizenzangaben der vorhandenen realen Aufnahmen vervollständigen.
 4. Vergleichstabelle, Dokumentation und Pitch fertigstellen.
 
 ## Grenzen

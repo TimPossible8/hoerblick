@@ -2,51 +2,60 @@
   "seed": 2627,
   "sample_rate": 16000,
   "clip_seconds": 5,
-  "epochs_requested": 30,
-  "epochs_completed": 8,
-  "accuracy": 0.25,
+  "target_validation_accuracy": 0.75,
+  "validation_accuracy_at_save": 0.875,
+  "validation_count": 8,
+  "classifier": "extra_trees_with_trainable_keras_calibration",
+  "tree_count": 500,
+  "epochs_completed": 1,
+  "training_rounds": 1,
+  "fit_count": 22,
+  "initial_learning_rate": 0.001,
+  "final_learning_rate": 0.001,
+  "accuracy": 0.6667,
+  "test_accuracy": 0.6667,
   "per_class": {
     "alarm": {
       "test_count": 3,
-      "recall": 1.0
+      "recall": 0.6667
     },
     "siren": {
       "test_count": 3,
-      "recall": 0.0
+      "recall": 1.0
     },
     "doorbell": {
       "test_count": 4,
-      "recall": 0.0
+      "recall": 0.5
     },
     "background": {
       "test_count": 2,
-      "recall": 0.0
+      "recall": 0.5
     }
   },
   "confusion_matrix_rows_true_columns_predicted": [
     [
-      3,
-      0,
-      0,
-      0
-    ],
-    [
-      3,
-      0,
-      0,
-      0
-    ],
-    [
-      4,
-      0,
-      0,
-      0
-    ],
-    [
       2,
       0,
       0,
+      1
+    ],
+    [
+      0,
+      3,
+      0,
       0
+    ],
+    [
+      1,
+      1,
+      2,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      1
     ]
   ],
   "train_count": 30,
