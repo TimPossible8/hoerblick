@@ -24,6 +24,7 @@ STATIC = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/styles.css": ("styles.css", "text/css; charset=utf-8"),
     "/script.js": ("script.js", "application/javascript; charset=utf-8"),
+    "/streamlit.js": ("streamlit.js", "application/javascript; charset=utf-8"),
 }
 
 

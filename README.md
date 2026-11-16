@@ -2,7 +2,7 @@
 
 HörBlick ist ein schulisches Prototyp-Projekt zur Klausurersatzleistung Informatik. Die Anwendung ordnet Umgebungsgeräusche ein und macht sicherheitsrelevante Schallereignisse für Menschen mit Hörbeeinträchtigung sichtbar.
 
-Das Repository enthält eine eigenständige Weboberfläche, einen Python-/Streamlit-Prototyp, Trainings- und Testdaten, Modellcode sowie die Projektdokumentation. Die Anwendung ist eine Demonstration und ersetzt keine zertifizierte Warntechnik oder normgeprüften Rauchmelder.
+Das Repository enthält eine gemeinsame Weboberfläche für den lokalen Python-Server und Streamlit, Trainings- und Testdaten, Modellcode sowie die Projektdokumentation. Die Anwendung ist eine Demonstration und ersetzt keine zertifizierte Warntechnik oder normgeprüften Rauchmelder.
 
 ## Projektstruktur
 
@@ -20,7 +20,7 @@ Das Repository enthält eine eigenständige Weboberfläche, einen Python-/Stream
 
 ## Webprototyp öffnen
 
-`web-prototype/index.html` ist die eigenständige mobile UI-Skizze mit den drei Ansichten Analyse, Vergleich und Über. Nach dem lokalen Herunterladen genügt ein Doppelklick auf die HTML-Datei. Die Schriftart und die Material-Symbole werden über Google Fonts geladen.
+`web-prototype/index.html` enthält die aktuelle mobile Oberfläche mit den drei Ansichten Analyse, Vergleich und Über. Für die lokale Audioanalyse `Start-HoerBlick.ps1` starten und `http://127.0.0.1:8765` öffnen. Ein Doppelklick auf die HTML-Datei zeigt nur die Oberfläche ohne Python-Anbindung. Die Schriftart und die Material-Symbole werden über Google Fonts geladen.
 
 Die Bildschirmansichten sind in [docs/screenshots](docs/screenshots/) dokumentiert:
 
@@ -38,11 +38,22 @@ python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Die optionalen Modellabhängigkeiten für TensorFlow, TensorFlow Hub und lokales Training stehen in `hoerblick/requirements-ml.txt`.
+`requirements.txt` bindet die Modellabhängigkeiten aus `requirements-ml.txt` ein, einschließlich TensorFlow und TensorFlow Hub.
 
-Ohne exportierte Modell-Datei läuft die Streamlit-App im klar gekennzeichneten Demo-Modus. Das eigene Modell erwartet einen Teachable-Machine-Export in `hoerblick/models/model_a/` mit `keras_model.h5` und `labels.txt`.
+Streamlit lädt dieselben HTML-, CSS- und JavaScript-Dateien aus `web-prototype/` als Komponente. Uploads werden über Streamlit an die vorhandenen Python-Modelladapter weitergereicht. Ein zusätzlicher HTTP-Server ist dafür nicht erforderlich.
 
-Der eingecheckte Modellcheck erreicht mit einem kleinen realen Testsatz 25 % Accuracy und erkennt alle Klassen fälschlich als Alarm. Er belegt den Ablauf, nicht die Qualität des Modells. Die vollständigen Messwerte stehen in [`hoerblick/models/model_a/metrics.json`](hoerblick/models/model_a/metrics.json) und die Einordnung im [Trainingsprotokoll](hoerblick/docs/trainingsprotokoll.md).
+Fehlende Modelle werden als nicht verfügbar angezeigt; es werden keine Demo-Ergebnisse als echte Analyse ausgegeben. Der eigene Export gehört nach `hoerblick/models/model_a/keras_model.h5` und erwartet 448 Merkmale und vier Klassen. Gewichte werden nicht in Git versioniert. YAMNet wird beim ersten Start aus TensorFlow Hub geladen. Ist nur YAMNet verfügbar, wird es automatisch ausgewählt.
+
+## Auf Streamlit veröffentlichen
+
+- Repository: `TimPossible8/hoerblick`
+- Branch: `main`
+- Main file path: `hoerblick/app.py`
+- Python: `3.12`
+
+Das gesamte Repository muss ausgecheckt werden, einschließlich `web-prototype/`. Nur `app.py` hochzuladen reicht nicht. Nach Aktualisierung der verbundenen Branch den Deployment-Stand prüfen und die App bei Bedarf neu starten.
+
+In der Cloud werden Uploads auf dem Streamlit-Server verarbeitet. Die App schreibt sie nicht als Dateien auf die Festplatte. Ohne separat bereitgestellten eigenen Modellexport ist online nur YAMNet verfügbar. Die Vergleichsansicht zeigt die gespeicherten Messungen aus `hoerblick/vergleich.csv`, nicht einen neuen Cloud-Testlauf.
 
 ## Daten und Modi
 
@@ -73,6 +84,6 @@ Reale Audioaufnahmen bleiben außerhalb von Git. Das Training übernimmt später
 
 ## Technische Hinweise
 
-Der Streamlit-Prototyp zeigt eine klare Warnhierarchie mit Farbe, Text und Symbol. Die synthetische Quelle alarmiert bewusst, damit das Interface auch ohne Audioausgabe verständlich bleibt. Das Repository speichert bewusst keine erzeugten Modellgewichte, Zugangsdaten oder lokalen virtuellen Umgebungen.
+Die Oberfläche zeigt eine klare Warnhierarchie mit Farbe, Text und Symbol. Ergebnisse beruhen auf dem gewählten Modell. Das Repository speichert keine erzeugten Modellgewichte, Zugangsdaten oder lokalen virtuellen Umgebungen.
 
 Die verwendeten Webfonts und Material Symbols werden von Google Fonts geladen. YAMNet stammt aus TensorFlow Hub und steht unter Apache-2.0.

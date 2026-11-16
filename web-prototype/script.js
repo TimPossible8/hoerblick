@@ -1,4 +1,17 @@
 const $ = (selector) => document.querySelector(selector);
+async function apiJson(path, options) {
+  const response = await fetch(path, options);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "Serveranfrage fehlgeschlagen.");
+  return data;
+}
+const transport = window.hoerblickTransport || {
+  status: () => apiJson("/api/status"),
+  comparison: () => apiJson("/api/comparison"),
+  analyse: (file, model) => apiJson(`/api/analyse?model=${model}`, {
+    method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file,
+  }),
+};
 const audioFile = $("#audio-file");
 const resultPanel = $("#analysis-result");
 const analyseButton = $("#analyse-button");
@@ -34,6 +47,7 @@ document.querySelectorAll("[data-screen]").forEach((button) => {
       else item.removeAttribute("aria-current");
     });
     window.scrollTo({ top: 0, behavior: "auto" });
+    $(".app-shell").scrollTo({ top: 0, behavior: "auto" });
   });
 });
 audioFile.addEventListener("change", () => {
@@ -60,14 +74,10 @@ analyseButton.addEventListener("click", async () => {
   const version = requestVersion, model = selectedModel;
   busy = true;
   updateControls();
-  setMessage("Die ersten fünf Sekunden werden lokal analysiert …");
+  setMessage("Die ersten fünf Sekunden werden analysiert …");
   try {
-    const response = await fetch(`/api/analyse?model=${model}`, {
-      method: "POST", headers: { "Content-Type": "application/octet-stream" }, body: file,
-    });
-    const result = await response.json();
+    const result = await transport.analyse(file, model);
     if (version !== requestVersion) return;
-    if (!response.ok) throw new Error(result.error || "Die Analyse ist fehlgeschlagen.");
     const colors = { Rot: "red", Gelb: "yellow", Grün: "green" };
     const icons = { Rot: "priority_high", Gelb: "info", Grün: "check" };
     resultPanel.className = `warning-panel warning-panel--${colors[result.warning.level]}`;
@@ -101,24 +111,26 @@ $("#reset-button").addEventListener("click", () => {
 });
 async function loadStatus() {
   try {
-    const response = await fetch("/api/status");
-    if (!response.ok) throw new Error("Status nicht verfügbar");
-    statuses = await response.json();
+    statuses = await transport.status();
+    if (!statuses[selectedModel]?.ready) {
+      const available = ["own", "yamnet"].find((key) => statuses[key]?.ready);
+      if (available) document.querySelector(`[data-model="${available}"]`).click();
+    }
     const ready = Object.values(statuses).filter((s) => s.ready).length;
     $("#connection-status").textContent = `${ready}/2 Modelle geladen`;
     for (const key of ["own", "yamnet"]) $("#status-" + key).textContent = statuses[key].ready ? "Modell geladen" : "Nicht verfügbar";
     if (!ready) setMessage("Modelle nicht verfügbar. Details unter der Modellwahl.", true);
-  } catch {
+  } catch (error) {
     $("#connection-status").textContent = "Server nicht erreichbar";
-    setMessage("Bitte Start-HoerBlick.ps1 starten und http://127.0.0.1:8765 öffnen.", true);
+    setMessage(window.hoerblickTransport
+      ? `Server nicht bereit: ${error.message} Bitte die Seite neu laden.`
+      : "Bitte Start-HoerBlick.ps1 starten und http://127.0.0.1:8765 öffnen.", true);
   }
   updateControls();
 }
 async function loadComparison() {
   try {
-    const response = await fetch("/api/comparison");
-    if (!response.ok) throw new Error("Vergleich nicht verfügbar");
-    const { rows, metadata } = await response.json();
+    const { rows, metadata } = await transport.comparison();
     const table = $("#comparison-body");
     table.replaceChildren();
     rows.forEach((row) => {

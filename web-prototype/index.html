@@ -93,7 +93,7 @@
             <article class="model-summary model-summary--mint"><span class="summary-icon material-symbols-rounded">hub</span><p>Version B</p><h2>YAMNet</h2><span class="summary-status" id="status-yamnet">wird geprüft …</span></article>
           </div>
           <section class="surface-panel comparison-panel">
-            <div class="panel-heading"><div><p class="section-kicker">Messwerte</p><h2>Testübersicht</h2></div><a class="icon-button icon-button--small" href="/api/comparison.csv" download="vergleich.csv" aria-label="Tabelle exportieren"><span class="material-symbols-rounded">download</span></a></div>
+            <div class="panel-heading"><div><p class="section-kicker">Messwerte</p><h2>Testübersicht</h2></div><a id="comparison-download" class="icon-button icon-button--small" href="/api/comparison.csv" download="vergleich.csv" aria-label="Tabelle exportieren"><span class="material-symbols-rounded">download</span></a></div>
             <div class="comparison-table"><div class="comparison-row comparison-row--head"><span>Kriterium</span><span>Eigen</span><span>YAMNet</span></div><div id="comparison-body"></div></div>
             <p class="table-note" id="comparison-note">Vergleich wird geladen …</p>
           </section>
@@ -108,7 +108,7 @@
           <section class="surface-panel source-list">
             <h2>Modelle &amp; Datenschutz</h2>
             <p>Eigenes Modell: lokal trainierter Extra-Trees-Klassifikator mit Keras-Kalibrierung. YAMNet: vortrainiertes AudioSet-Modell (Apache-2.0).</p>
-            <p>Der Python-Server auf diesem Computer analysiert die Datei und speichert sie nicht. YAMNet wird beim ersten Start heruntergeladen. Google Fonts lädt Schriftarten aus dem Internet.</p>
+            <p id="privacy-details">Der Python-Server auf diesem Computer analysiert die Datei und speichert sie nicht. YAMNet wird beim ersten Start heruntergeladen. Google Fonts lädt Schriftarten aus dem Internet.</p>
             <p>Die Warnstufe berücksichtigt Klasse und Modellscore. Grün bedeutet nur „kein Zielsignal erkannt“. Die Scores beider Modelle sind keine direkt vergleichbaren Trefferwahrscheinlichkeiten.</p>
             <p><a href="https://www.tensorflow.org/hub/tutorials/yamnet" target="_blank" rel="noreferrer">YAMNet-Dokumentation</a> · <a href="https://github.com/tensorflow/models/tree/master/research/audioset/yamnet" target="_blank" rel="noreferrer">Quellcode und Lizenz</a></p>
           </section>
@@ -121,6 +121,7 @@
         <button class="bottom-nav-item" data-screen="ueber"><span class="nav-icon material-symbols-rounded">info</span><span>Über</span></button>
       </nav>
     </div>
+    <script src="streamlit.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
